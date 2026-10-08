@@ -58,6 +58,50 @@ The formulation is intentionally stochastic. Similar applicants can receive diff
 
 Limitations remain substantial. The event is a generated research construct based on assumptions, not observed borrower behavior. It can support controlled experiments about software behavior and methodology, but it cannot establish real-world credit risk validity, fairness, compliance, or borrower impact.
 
+## Baseline Risk Model
+
+The baseline is required so later safety-gating experiments have a conventional automated decision benchmark. It represents the ordinary path of alternative financial features to a risk probability and automated decision. The baseline is a predictive benchmark, not the proposed research contribution.
+
+The baseline uses `data/processed/synthetic/model_dataset.csv` and predicts `financial_stress_event`. It explicitly excludes `applicant_id`, synthetic population labels, latent variables, `financial_stress_probability`, and conventional credit-history variables.
+
+The feature set contains the 13 allowed alternative-financial features:
+
+- `monthly_income_mean`
+- `income_variability`
+- `expense_to_income_ratio`
+- `savings_consistency`
+- `utility_payment_regularity`
+- `rent_payment_regularity`
+- `cashflow_volatility`
+- `transaction_frequency`
+- `average_monthly_balance`
+- `minimum_monthly_balance`
+- `positive_cashflow_ratio`
+- `income_growth`
+- `financial_buffer_ratio`
+
+The split strategy is deterministic 70/15/15 train/validation/test with stratification on `financial_stress_event`. The validation set is used only for threshold sensitivity analysis. The held-out test set is used for final metrics.
+
+Two scikit-learn models were trained:
+
+- Logistic Regression with standardized features.
+- HistGradientBoostingClassifier as a lightweight tree-based baseline.
+
+Both models output `P(financial_stress_event = 1)`. The initial decision threshold is documented as 0.50, with validation-set sensitivity analysis at 0.30, 0.40, 0.50, 0.60, and 0.70. Lower thresholds increase recall and positive prediction rate; higher thresholds are more selective but miss more stress events.
+
+Held-out test results:
+
+| Model | ROC-AUC | PR-AUC | Brier | Log Loss | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic Regression | 0.6582 | 0.5397 | 0.2081 | 0.6055 | 0.6347 | 0.2658 | 0.3747 |
+| HistGradientBoostingClassifier | 0.6512 | 0.5254 | 0.2107 | 0.6130 | 0.5738 | 0.2677 | 0.3651 |
+
+The test actual event rate is approximately 0.3487. At the 0.50 threshold, Logistic Regression has a positive prediction rate of 0.1460 and HistGradientBoosting has a positive prediction rate of 0.1627.
+
+Calibration diagnostics were produced through reliability-diagram bins and Brier score. No calibration correction was applied. The Brier scores around 0.21 suggest probability quality is imperfect and should be studied before any safety-gating claims are made.
+
+Leakage review: performance is moderate rather than unexpectedly high. The feature list excludes the generated stress probability and identifiers. However, the outcome is synthetic and generated from the same family of financial features, so performance cannot be interpreted as real-world credit-risk validity.
+
 ## Open Research Decisions
 
 - Select the first dataset and document licensing, provenance, variables, and known limitations.

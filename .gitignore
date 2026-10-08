@@ -31,3 +31,5 @@ data/processed/*
 # Generated experiment outputs
 experiments/*
 !experiments/.gitkeep
+!experiments/baseline/
+!experiments/baseline/**

@@ -1,0 +1,255 @@
+{
+  "features": [
+    "monthly_income_mean",
+    "income_variability",
+    "expense_to_income_ratio",
+    "savings_consistency",
+    "utility_payment_regularity",
+    "rent_payment_regularity",
+    "cashflow_volatility",
+    "transaction_frequency",
+    "average_monthly_balance",
+    "minimum_monthly_balance",
+    "positive_cashflow_ratio",
+    "income_growth",
+    "financial_buffer_ratio"
+  ],
+  "models": {
+    "hist_gradient_boosting": {
+      "calibration_diagnostics": [
+        {
+          "mean_predicted_probability": 0.08111281766014296,
+          "observed_event_rate": 0.2777777777777778
+        },
+        {
+          "mean_predicted_probability": 0.16334967241430196,
+          "observed_event_rate": 0.22566371681415928
+        },
+        {
+          "mean_predicted_probability": 0.25013858147854784,
+          "observed_event_rate": 0.2578616352201258
+        },
+        {
+          "mean_predicted_probability": 0.34691071798305484,
+          "observed_event_rate": 0.3436426116838488
+        },
+        {
+          "mean_predicted_probability": 0.44991594357151804,
+          "observed_event_rate": 0.4262295081967213
+        },
+        {
+          "mean_predicted_probability": 0.5473517449108777,
+          "observed_event_rate": 0.4076923076923077
+        },
+        {
+          "mean_predicted_probability": 0.6426020491464332,
+          "observed_event_rate": 0.7540983606557377
+        },
+        {
+          "mean_predicted_probability": 0.7464450112443249,
+          "observed_event_rate": 0.7878787878787878
+        },
+        {
+          "mean_predicted_probability": 0.8510841880836334,
+          "observed_event_rate": 0.7222222222222222
+        },
+        {
+          "mean_predicted_probability": 0.911386373502665,
+          "observed_event_rate": 1.0
+        }
+      ],
+      "configuration": {
+        "estimator": "HistGradientBoostingClassifier",
+        "learning_rate": 0.05,
+        "max_iter": 150,
+        "max_leaf_nodes": 31
+      },
+      "test_metrics": {
+        "accuracy": 0.6753333333333333,
+        "actual_event_rate": 0.3486666666666667,
+        "brier_score": 0.21073258424436556,
+        "confusion_matrix": [
+          [
+            873,
+            104
+          ],
+          [
+            383,
+            140
+          ]
+        ],
+        "f1": 0.3650586701434159,
+        "log_loss": 0.6129530341302122,
+        "positive_prediction_rate": 0.16266666666666665,
+        "pr_auc": 0.5253734880583034,
+        "precision": 0.5737704918032787,
+        "recall": 0.2676864244741874,
+        "roc_auc": 0.6512404813580417,
+        "threshold": 0.5
+      },
+      "validation_threshold_sensitivity": [
+        {
+          "accuracy": 0.5586666666666666,
+          "f1": 0.4961948249619482,
+          "positive_prediction_rate": 0.5266666666666666,
+          "precision": 0.41265822784810124,
+          "recall": 0.6221374045801527,
+          "threshold": 0.3
+        },
+        {
+          "accuracy": 0.6406666666666667,
+          "f1": 0.46046046046046046,
+          "positive_prediction_rate": 0.31666666666666665,
+          "precision": 0.4842105263157895,
+          "recall": 0.4389312977099237,
+          "threshold": 0.4
+        },
+        {
+          "accuracy": 0.6713333333333333,
+          "f1": 0.35555555555555557,
+          "positive_prediction_rate": 0.16066666666666668,
+          "precision": 0.5643153526970954,
+          "recall": 0.2595419847328244,
+          "threshold": 0.5
+        },
+        {
+          "accuracy": 0.6633333333333333,
+          "f1": 0.20722135007849293,
+          "positive_prediction_rate": 0.07533333333333334,
+          "precision": 0.584070796460177,
+          "recall": 0.12595419847328243,
+          "threshold": 0.6
+        },
+        {
+          "accuracy": 0.6613333333333333,
+          "f1": 0.11188811188811189,
+          "positive_prediction_rate": 0.032,
+          "precision": 0.6666666666666666,
+          "recall": 0.061068702290076333,
+          "threshold": 0.7
+        }
+      ]
+    },
+    "logistic_regression": {
+      "calibration_diagnostics": [
+        {
+          "mean_predicted_probability": 0.17464792231045725,
+          "observed_event_rate": 0.19135802469135801
+        },
+        {
+          "mean_predicted_probability": 0.2536593182126337,
+          "observed_event_rate": 0.2603305785123967
+        },
+        {
+          "mean_predicted_probability": 0.34440176740744854,
+          "observed_event_rate": 0.31297709923664124
+        },
+        {
+          "mean_predicted_probability": 0.449020337863816,
+          "observed_event_rate": 0.4297520661157025
+        },
+        {
+          "mean_predicted_probability": 0.5421080199484781,
+          "observed_event_rate": 0.582089552238806
+        },
+        {
+          "mean_predicted_probability": 0.6434666124134081,
+          "observed_event_rate": 0.6724137931034483
+        },
+        {
+          "mean_predicted_probability": 0.7478130530512487,
+          "observed_event_rate": 0.782608695652174
+        },
+        {
+          "mean_predicted_probability": 0.8121140602150596,
+          "observed_event_rate": 1.0
+        }
+      ],
+      "configuration": {
+        "estimator": "Pipeline(StandardScaler, LogisticRegression)",
+        "max_iter": 1000,
+        "solver": "lbfgs"
+      },
+      "test_metrics": {
+        "accuracy": 0.6906666666666667,
+        "actual_event_rate": 0.3486666666666667,
+        "brier_score": 0.20805058584429093,
+        "confusion_matrix": [
+          [
+            897,
+            80
+          ],
+          [
+            384,
+            139
+          ]
+        ],
+        "f1": 0.3746630727762803,
+        "log_loss": 0.6055421444603376,
+        "positive_prediction_rate": 0.146,
+        "pr_auc": 0.5397078874256661,
+        "precision": 0.634703196347032,
+        "recall": 0.26577437858508607,
+        "roc_auc": 0.6581586821952714,
+        "threshold": 0.5
+      },
+      "validation_threshold_sensitivity": [
+        {
+          "accuracy": 0.5646666666666667,
+          "f1": 0.5187914517317612,
+          "positive_prediction_rate": 0.5553333333333333,
+          "precision": 0.4225690276110444,
+          "recall": 0.6717557251908397,
+          "threshold": 0.3
+        },
+        {
+          "accuracy": 0.6673333333333333,
+          "f1": 0.4685835995740149,
+          "positive_prediction_rate": 0.27666666666666667,
+          "precision": 0.5301204819277109,
+          "recall": 0.4198473282442748,
+          "threshold": 0.4
+        },
+        {
+          "accuracy": 0.6653333333333333,
+          "f1": 0.3008356545961003,
+          "positive_prediction_rate": 0.12933333333333333,
+          "precision": 0.5567010309278351,
+          "recall": 0.20610687022900764,
+          "threshold": 0.5
+        },
+        {
+          "accuracy": 0.664,
+          "f1": 0.16,
+          "positive_prediction_rate": 0.050666666666666665,
+          "precision": 0.631578947368421,
+          "recall": 0.0916030534351145,
+          "threshold": 0.6
+        },
+        {
+          "accuracy": 0.656,
+          "f1": 0.06859205776173286,
+          "positive_prediction_rate": 0.02,
+          "precision": 0.6333333333333333,
+          "recall": 0.03625954198473282,
+          "threshold": 0.7
+        }
+      ]
+    }
+  },
+  "seed": 42,
+  "selected_threshold": 0.5,
+  "sensitivity_thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7
+  ],
+  "split_sizes": {
+    "test": 1500,
+    "train": 7000,
+    "validation": 1500
+  },
+  "split_strategy": "70/15/15 stratified on financial_stress_event"
+}

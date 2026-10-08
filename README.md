@@ -128,6 +128,38 @@ It contains `applicant_id`, all allowed alternative-financial features, `financi
 
 The validation notebook `notebooks/02_outcome_validation.ipynb` checks event rate, probability distribution, feature relationships, descriptive event rates across synthetic populations, overlap, stochasticity, and whether any single feature is too predictive.
 
+## Baseline Risk Models
+
+The Phase 3 baseline represents a conventional automated decision pipeline:
+
+```text
+alternative financial features
+    -> risk model
+    -> P(financial_stress_event = 1)
+    -> threshold-based automated decision
+```
+
+The baseline is a predictive benchmark, not the proposed research contribution.
+
+The baseline uses a deterministic 70/15/15 train/validation/test split with stratification on `financial_stress_event`. It trains:
+
+- Logistic Regression with standardized features.
+- HistGradientBoostingClassifier.
+
+The models use only the 13 allowed alternative-financial features. They do not use `applicant_id`, population labels, latent variables, `financial_stress_probability`, or conventional credit-history variables.
+
+The initial threshold is fixed at 0.50, while validation sensitivity is reported for 0.30, 0.40, 0.50, 0.60, and 0.70. The held-out test set is evaluated with ROC-AUC, PR-AUC, accuracy, precision, recall, F1, confusion matrix, Brier score, log loss, positive prediction rate, and actual event rate.
+
+Baseline artifacts are saved under:
+
+- `experiments/baseline/metrics.json`
+- `experiments/baseline/model_comparison.csv`
+- `experiments/baseline/predictions_logistic.csv`
+- `experiments/baseline/predictions_tree.csv`
+- `experiments/baseline/models/`
+
+The notebook `notebooks/03_baseline_risk_model.ipynb` runs the baseline experiment and shows calibration diagnostics without applying calibration correction.
+
 ## Excluded Variables
 
 Because this project studies thin-file and credit-invisible applicants, conventional credit-history variables are excluded. The synthetic data must not include credit score, CIBIL score, prior loan history, previous EMI repayment history, credit-card repayment history, number of previous loans, bureau history, or previous-loan delinquency history.
