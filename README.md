@@ -95,6 +95,39 @@ The synthetic population has three overlapping groups:
 
 The groups intentionally overlap so future experiments are not reduced to simply identifying a synthetic label.
 
+## Synthetic Outcome
+
+The project uses a synthetic outcome named `financial_stress_event`. It represents a future adverse financial state in which an applicant may be unable to comfortably meet regular financial obligations. It is not a loan default label, repayment default label, or observed real-world credit outcome.
+
+The outcome is generated from allowed alternative-financial features using a stochastic formulation:
+
+```text
+stress_score =
+    intercept
+    + weighted expense-to-income pressure
+    + weighted income instability
+    + weighted savings weakness
+    + weighted payment irregularity
+    + weighted cashflow volatility pressure
+    + weighted financial buffer weakness
+    + weighted positive-cashflow weakness
+    + idiosyncratic noise
+
+P(financial_stress_event) = sigmoid(stress_score)
+
+financial_stress_event ~ Bernoulli(P(financial_stress_event))
+```
+
+The process does not use the synthetic population label (`stable`, `volatile`, `borderline`) and does not expose latent variables as model features. The stochastic noise is intentional so similar financial profiles can sometimes have different outcomes.
+
+The model-ready processed dataset is:
+
+- `data/processed/synthetic/model_dataset.csv`
+
+It contains `applicant_id`, all allowed alternative-financial features, `financial_stress_probability`, and `financial_stress_event`.
+
+The validation notebook `notebooks/02_outcome_validation.ipynb` checks event rate, probability distribution, feature relationships, descriptive event rates across synthetic populations, overlap, stochasticity, and whether any single feature is too predictive.
+
 ## Excluded Variables
 
 Because this project studies thin-file and credit-invisible applicants, conventional credit-history variables are excluded. The synthetic data must not include credit score, CIBIL score, prior loan history, previous EMI repayment history, credit-card repayment history, number of previous loans, bureau history, or previous-loan delinquency history.

@@ -27,6 +27,37 @@ The main limitation is that synthetic data reflects generator assumptions. It ca
 
 Synthetic data also creates the risk of accidentally making future safety-gate results look better than they are. To reduce this risk, the current groups intentionally overlap and the generator does not create a target label or hard-code future model outcomes.
 
+## Synthetic Financial Stress Outcome
+
+The research needs an outcome variable so later experiments can compare conventional automated decisions against gated decisions. Because the synthetic applicants are designed as thin-file or credit-invisible applicants, it would be scientifically misleading to create a target named loan default, repayment default, or observed credit default. The synthetic population has no real loan histories and no observed repayment outcomes.
+
+The current outcome is named `financial_stress_event`. It is defined as a synthetic future adverse financial state indicating severe financial stress or inability to comfortably meet regular financial obligations. It is not equivalent to real-world credit default and should not be described as such.
+
+The outcome is generated from observable alternative-financial features:
+
+```text
+stress_score =
+    -1.85
+    + 1.10 * expense_pressure
+    + 0.90 * income_instability
+    + 0.85 * savings_weakness
+    + 1.00 * payment_irregularity
+    + 0.80 * cashflow_volatility_pressure
+    + 1.10 * buffer_weakness
+    + 0.80 * cashflow_weakness
+    + Normal(0, 0.65)
+
+financial_stress_probability = sigmoid(stress_score)
+
+financial_stress_event ~ Bernoulli(financial_stress_probability)
+```
+
+The synthetic population label is not used in this calculation. Latent applicant traits are not exposed in the model dataset. Any influence from underlying applicant behavior enters through derived financial features such as expense-to-income pressure, income variability, savings consistency, payment regularity, cashflow volatility, and financial buffer ratio.
+
+The formulation is intentionally stochastic. Similar applicants can receive different outcomes, which reflects uncertainty in future financial conditions and helps avoid deterministic threshold labels. It is also intentionally not optimized to make a future model or safety gate look successful.
+
+Limitations remain substantial. The event is a generated research construct based on assumptions, not observed borrower behavior. It can support controlled experiments about software behavior and methodology, but it cannot establish real-world credit risk validity, fairness, compliance, or borrower impact.
+
 ## Open Research Decisions
 
 - Select the first dataset and document licensing, provenance, variables, and known limitations.
