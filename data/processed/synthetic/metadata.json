@@ -1,0 +1,21 @@
+{
+  "forbidden_conventional_credit_variables_excluded": true,
+  "generator_version": "0.1.0",
+  "latent_variables": [
+    "income_stability",
+    "spending_discipline",
+    "savings_behavior",
+    "payment_discipline",
+    "financial_liquidity",
+    "transaction_activity"
+  ],
+  "latent_variables_exposed_as_features": false,
+  "months": 12,
+  "n_applicants": 10000,
+  "population_proportions": {
+    "borderline": 0.3,
+    "stable": 0.4,
+    "volatile": 0.3
+  },
+  "seed": 42
+}

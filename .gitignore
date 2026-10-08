@@ -23,6 +23,10 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/raw/synthetic/
+!data/raw/synthetic/*
+!data/processed/synthetic/
+!data/processed/synthetic/*
 
 # Generated experiment outputs
 experiments/*
