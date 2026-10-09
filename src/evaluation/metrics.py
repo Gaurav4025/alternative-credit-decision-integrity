@@ -95,3 +95,50 @@ def calibration_diagnostics(
         }
         for predicted, observed in zip(predicted_probability, observed_rate)
     ]
+
+
+def expected_calibration_error(
+    y_true: pd.Series | np.ndarray,
+    y_probability: pd.Series | np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    """Compute Expected Calibration Error with fixed-width probability bins.
+
+    Bins are equally spaced over ``[0, 1]``. Each non-empty bin contributes:
+
+    ``bin_size / n_samples * abs(mean_predicted_probability - observed_event_rate)``
+
+    Empty bins contribute zero because they contain no predictions.
+    """
+
+    if n_bins <= 0:
+        raise ValueError("n_bins must be positive.")
+
+    y_true_array = np.asarray(y_true)
+    y_probability_array = np.asarray(y_probability)
+    if len(y_true_array) != len(y_probability_array):
+        raise ValueError("y_true and y_probability must have the same length.")
+    if len(y_true_array) == 0:
+        raise ValueError("ECE requires at least one prediction.")
+    if ((y_probability_array < 0) | (y_probability_array > 1)).any():
+        raise ValueError("Probabilities must be in [0, 1].")
+
+    bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    for index in range(n_bins):
+        lower = bin_edges[index]
+        upper = bin_edges[index + 1]
+        if index == n_bins - 1:
+            in_bin = (y_probability_array >= lower) & (y_probability_array <= upper)
+        else:
+            in_bin = (y_probability_array >= lower) & (y_probability_array < upper)
+
+        if not in_bin.any():
+            continue
+
+        bin_probability = y_probability_array[in_bin].mean()
+        bin_observed_rate = y_true_array[in_bin].mean()
+        bin_weight = in_bin.mean()
+        ece += bin_weight * abs(bin_probability - bin_observed_rate)
+
+    return float(ece)

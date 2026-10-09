@@ -102,6 +102,42 @@ Calibration diagnostics were produced through reliability-diagram bins and Brier
 
 Leakage review: performance is moderate rather than unexpectedly high. The feature list excludes the generated stress probability and identifiers. However, the outcome is synthetic and generated from the same family of financial features, so performance cannot be interpreted as real-world credit-risk validity.
 
+## Probability Calibration
+
+Calibration is relevant because downstream automated decision-making and future safety-gating research depend on probability reliability, not only ranking performance. A model can have useful ROC-AUC while assigning probabilities that do not match observed event rates.
+
+The calibration phase evaluates the two existing baseline models without redesigning them:
+
+- Logistic Regression.
+- HistGradientBoostingClassifier.
+
+Three probability variants are evaluated for each model:
+
+- Raw uncalibrated probabilities.
+- Sigmoid / Platt calibration.
+- Isotonic calibration.
+
+Protocol: baseline models are fit on the training set. Sigmoid and isotonic calibration mappings are fit on the validation set only. The held-out test set is used only for final reporting. Test labels are not used to fit calibration parameters or choose the calibration method.
+
+Expected Calibration Error uses 10 fixed-width probability bins over `[0, 1]`. For each non-empty bin, the contribution is the bin sample share multiplied by the absolute gap between mean predicted probability and observed event rate. Empty bins are ignored.
+
+Held-out test probability-quality results:
+
+| Model | Method | Brier | Log Loss | ECE |
+| --- | --- | ---: | ---: | ---: |
+| Logistic Regression | Raw | 0.2081 | 0.6055 | 0.0210 |
+| Logistic Regression | Sigmoid | 0.2085 | 0.6066 | 0.0244 |
+| Logistic Regression | Isotonic | 0.2094 | 0.6517 | 0.0155 |
+| HistGradientBoostingClassifier | Raw | 0.2107 | 0.6130 | 0.0379 |
+| HistGradientBoostingClassifier | Sigmoid | 0.2108 | 0.6116 | 0.0258 |
+| HistGradientBoostingClassifier | Isotonic | 0.2120 | 0.6592 | 0.0217 |
+
+Calibration observations: logistic regression was already fairly calibrated by ECE, and sigmoid calibration slightly worsened Brier, log loss, and ECE. Isotonic reduced ECE but worsened log loss and ranking metrics. For HistGradientBoosting, both sigmoid and isotonic improved ECE, while Brier score did not improve and isotonic substantially worsened log loss. This is a useful mixed result rather than evidence that calibration universally improves all probability metrics.
+
+Implications for the future Safety Gate: calibrated probability estimates may help downstream decision policies, but calibration alone is not uncertainty estimation, OOD detection, or evidence-quality scoring. Safety-gate experiments should treat calibration as one input to reliability analysis, not as a replacement for uncertainty-aware gating.
+
+Limitations: all results remain synthetic and depend on the generated outcome mechanism. Calibration quality must be reassessed under distribution shift, evidence corruption, and eventually real-world validation data before drawing practical credit-decision conclusions.
+
 ## Open Research Decisions
 
 - Select the first dataset and document licensing, provenance, variables, and known limitations.

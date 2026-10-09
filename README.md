@@ -160,6 +160,27 @@ Baseline artifacts are saved under:
 
 The notebook `notebooks/03_baseline_risk_model.ipynb` runs the baseline experiment and shows calibration diagnostics without applying calibration correction.
 
+## Probability Calibration
+
+Phase 4 evaluates whether baseline risk probabilities are reliable. It compares raw probabilities, sigmoid / Platt calibration, and isotonic calibration for the two baseline models.
+
+The calibration protocol is:
+
+1. Fit baseline models on the training split.
+2. Fit calibration mappings on the validation split only.
+3. Evaluate raw and calibrated probabilities on the held-out test split.
+
+The test set is not used to fit calibration parameters or choose a calibration method.
+
+Calibration artifacts are saved under:
+
+- `experiments/calibration/metrics.json`
+- `experiments/calibration/calibration_comparison.csv`
+- `experiments/calibration/calibration_predictions.csv`
+- `experiments/calibration/models/`
+
+The notebook `notebooks/04_probability_calibration.ipynb` reports Brier score, log loss, ECE, reliability diagrams, and probability distributions. ECE uses 10 fixed-width bins over `[0, 1]`; empty bins are ignored.
+
 ## Excluded Variables
 
 Because this project studies thin-file and credit-invisible applicants, conventional credit-history variables are excluded. The synthetic data must not include credit score, CIBIL score, prior loan history, previous EMI repayment history, credit-card repayment history, number of previous loans, bureau history, or previous-loan delinquency history.

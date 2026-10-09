@@ -1,0 +1,385 @@
+{
+  "calibration_protocol": "baseline models fit on train; sigmoid and isotonic calibrators fit on validation only; test used only for final reporting",
+  "ece_binning_strategy": "10 fixed-width bins over [0, 1]; empty bins ignored",
+  "ece_bins": 10,
+  "features": [
+    "monthly_income_mean",
+    "income_variability",
+    "expense_to_income_ratio",
+    "savings_consistency",
+    "utility_payment_regularity",
+    "rent_payment_regularity",
+    "cashflow_volatility",
+    "transaction_frequency",
+    "average_monthly_balance",
+    "minimum_monthly_balance",
+    "positive_cashflow_ratio",
+    "income_growth",
+    "financial_buffer_ratio"
+  ],
+  "models": {
+    "hist_gradient_boosting": {
+      "isotonic": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.0705467372134039,
+            "observed_event_rate": 0.25925925925925924
+          },
+          {
+            "mean_predicted_probability": 0.27594399659340235,
+            "observed_event_rate": 0.25866336633663367
+          },
+          {
+            "mean_predicted_probability": 0.36769372420983853,
+            "observed_event_rate": 0.37916666666666665
+          },
+          {
+            "mean_predicted_probability": 0.4423894555581755,
+            "observed_event_rate": 0.4247104247104247
+          },
+          {
+            "mean_predicted_probability": 0.5710025330278502,
+            "observed_event_rate": 0.5675675675675675
+          },
+          {
+            "mean_predicted_probability": 0.6666666666666671,
+            "observed_event_rate": 0.7777777777777778
+          },
+          {
+            "mean_predicted_probability": 0.7596918685021918,
+            "observed_event_rate": 0.8
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.6773333333333333,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.21198479955401858,
+          "confusion_matrix": [
+            [
+              880,
+              97
+            ],
+            [
+              387,
+              136
+            ]
+          ],
+          "ece": 0.021716483335321047,
+          "f1": 0.35978835978835977,
+          "log_loss": 0.6591992637878341,
+          "positive_prediction_rate": 0.15533333333333332,
+          "pr_auc": 0.49181636916670135,
+          "precision": 0.5836909871244635,
+          "recall": 0.26003824091778205,
+          "roc_auc": 0.6413964784694239,
+          "threshold": 0.5
+        }
+      },
+      "raw": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.08111281766014296,
+            "observed_event_rate": 0.2777777777777778
+          },
+          {
+            "mean_predicted_probability": 0.16334967241430196,
+            "observed_event_rate": 0.22566371681415928
+          },
+          {
+            "mean_predicted_probability": 0.25013858147854784,
+            "observed_event_rate": 0.2578616352201258
+          },
+          {
+            "mean_predicted_probability": 0.34691071798305484,
+            "observed_event_rate": 0.3436426116838488
+          },
+          {
+            "mean_predicted_probability": 0.44991594357151804,
+            "observed_event_rate": 0.4262295081967213
+          },
+          {
+            "mean_predicted_probability": 0.5473517449108777,
+            "observed_event_rate": 0.4076923076923077
+          },
+          {
+            "mean_predicted_probability": 0.6426020491464332,
+            "observed_event_rate": 0.7540983606557377
+          },
+          {
+            "mean_predicted_probability": 0.7464450112443249,
+            "observed_event_rate": 0.7878787878787878
+          },
+          {
+            "mean_predicted_probability": 0.8510841880836334,
+            "observed_event_rate": 0.7222222222222222
+          },
+          {
+            "mean_predicted_probability": 0.911386373502665,
+            "observed_event_rate": 1.0
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.6753333333333333,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.21073258424436556,
+          "confusion_matrix": [
+            [
+              873,
+              104
+            ],
+            [
+              383,
+              140
+            ]
+          ],
+          "ece": 0.03790560548243757,
+          "f1": 0.3650586701434159,
+          "log_loss": 0.6129530341302122,
+          "positive_prediction_rate": 0.16266666666666665,
+          "pr_auc": 0.5253734880583034,
+          "precision": 0.5737704918032787,
+          "recall": 0.2676864244741874,
+          "roc_auc": 0.6512404813580417,
+          "threshold": 0.5
+        }
+      },
+      "sigmoid": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.17220749397140603,
+            "observed_event_rate": 0.21739130434782608
+          },
+          {
+            "mean_predicted_probability": 0.2612803716910546,
+            "observed_event_rate": 0.2328767123287671
+          },
+          {
+            "mean_predicted_probability": 0.34440312381441013,
+            "observed_event_rate": 0.34442270058708413
+          },
+          {
+            "mean_predicted_probability": 0.44153495888736083,
+            "observed_event_rate": 0.42
+          },
+          {
+            "mean_predicted_probability": 0.5375832910056435,
+            "observed_event_rate": 0.6703296703296703
+          },
+          {
+            "mean_predicted_probability": 0.6456295219067337,
+            "observed_event_rate": 0.7419354838709677
+          },
+          {
+            "mean_predicted_probability": 0.7406027274145133,
+            "observed_event_rate": 0.8
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.686,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.2107693634830539,
+          "confusion_matrix": [
+            [
+              937,
+              40
+            ],
+            [
+              431,
+              92
+            ]
+          ],
+          "ece": 0.025815063115814312,
+          "f1": 0.28091603053435116,
+          "log_loss": 0.6115801501542126,
+          "positive_prediction_rate": 0.088,
+          "pr_auc": 0.5253734880583034,
+          "precision": 0.696969696969697,
+          "recall": 0.17590822179732313,
+          "roc_auc": 0.6512404813580417,
+          "threshold": 0.5
+        }
+      }
+    },
+    "logistic_regression": {
+      "isotonic": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.001929940341897269,
+            "observed_event_rate": 0.1111111111111111
+          },
+          {
+            "mean_predicted_probability": 0.2604008528927268,
+            "observed_event_rate": 0.2514124293785311
+          },
+          {
+            "mean_predicted_probability": 0.33168974445570043,
+            "observed_event_rate": 0.3271604938271605
+          },
+          {
+            "mean_predicted_probability": 0.4779542930513793,
+            "observed_event_rate": 0.4419889502762431
+          },
+          {
+            "mean_predicted_probability": 0.5396825396825417,
+            "observed_event_rate": 0.5373831775700935
+          },
+          {
+            "mean_predicted_probability": 0.6760862847592036,
+            "observed_event_rate": 0.0
+          },
+          {
+            "mean_predicted_probability": 0.7272727272727268,
+            "observed_event_rate": 0.7777777777777778
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.684,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.20935225502390548,
+          "confusion_matrix": [
+            [
+              850,
+              127
+            ],
+            [
+              347,
+              176
+            ]
+          ],
+          "ece": 0.015478376458541492,
+          "f1": 0.4261501210653753,
+          "log_loss": 0.6516572156146203,
+          "positive_prediction_rate": 0.202,
+          "pr_auc": 0.4982298205426599,
+          "precision": 0.5808580858085809,
+          "recall": 0.3365200764818356,
+          "roc_auc": 0.6531378493104305,
+          "threshold": 0.5
+        }
+      },
+      "raw": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.17464792231045725,
+            "observed_event_rate": 0.19135802469135801
+          },
+          {
+            "mean_predicted_probability": 0.2536593182126337,
+            "observed_event_rate": 0.2603305785123967
+          },
+          {
+            "mean_predicted_probability": 0.34440176740744854,
+            "observed_event_rate": 0.31297709923664124
+          },
+          {
+            "mean_predicted_probability": 0.449020337863816,
+            "observed_event_rate": 0.4297520661157025
+          },
+          {
+            "mean_predicted_probability": 0.5421080199484781,
+            "observed_event_rate": 0.582089552238806
+          },
+          {
+            "mean_predicted_probability": 0.6434666124134081,
+            "observed_event_rate": 0.6724137931034483
+          },
+          {
+            "mean_predicted_probability": 0.7478130530512487,
+            "observed_event_rate": 0.782608695652174
+          },
+          {
+            "mean_predicted_probability": 0.8121140602150596,
+            "observed_event_rate": 1.0
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.6906666666666667,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.20805058584429093,
+          "confusion_matrix": [
+            [
+              897,
+              80
+            ],
+            [
+              384,
+              139
+            ]
+          ],
+          "ece": 0.02102469884723291,
+          "f1": 0.3746630727762803,
+          "log_loss": 0.6055421444603376,
+          "positive_prediction_rate": 0.146,
+          "pr_auc": 0.5397078874256661,
+          "precision": 0.634703196347032,
+          "recall": 0.26577437858508607,
+          "roc_auc": 0.6581586821952714,
+          "threshold": 0.5
+        }
+      },
+      "sigmoid": {
+        "calibration_diagnostics": [
+          {
+            "mean_predicted_probability": 0.183750497665296,
+            "observed_event_rate": 0.18421052631578946
+          },
+          {
+            "mean_predicted_probability": 0.2568570889844871,
+            "observed_event_rate": 0.250501002004008
+          },
+          {
+            "mean_predicted_probability": 0.3446370391469036,
+            "observed_event_rate": 0.3070362473347548
+          },
+          {
+            "mean_predicted_probability": 0.44760930833770896,
+            "observed_event_rate": 0.43956043956043955
+          },
+          {
+            "mean_predicted_probability": 0.5416336426734207,
+            "observed_event_rate": 0.6048387096774194
+          },
+          {
+            "mean_predicted_probability": 0.638612071331687,
+            "observed_event_rate": 0.6976744186046512
+          },
+          {
+            "mean_predicted_probability": 0.7338398982847469,
+            "observed_event_rate": 0.9375
+          }
+        ],
+        "test_metrics": {
+          "accuracy": 0.6893333333333334,
+          "actual_event_rate": 0.3486666666666667,
+          "brier_score": 0.20854953268615226,
+          "confusion_matrix": [
+            [
+              914,
+              63
+            ],
+            [
+              403,
+              120
+            ]
+          ],
+          "ece": 0.024449621990310807,
+          "f1": 0.33994334277620397,
+          "log_loss": 0.6065872975028872,
+          "positive_prediction_rate": 0.122,
+          "pr_auc": 0.5397078874256661,
+          "precision": 0.6557377049180327,
+          "recall": 0.2294455066921606,
+          "roc_auc": 0.6581586821952714,
+          "threshold": 0.5
+        }
+      }
+    }
+  },
+  "seed": 42,
+  "split_sizes": {
+    "test": 1500,
+    "train": 7000,
+    "validation": 1500
+  },
+  "split_strategy": "70/15/15 stratified on financial_stress_event"
+}
