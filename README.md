@@ -1,6 +1,6 @@
 # Evidence-Aware and Uncertainty-Aware Safety Gating for Automated Alternative Credit Decisions
 
-This repository supports a six-month research project on safety gating for automated alternative credit decisions. The project studies whether automated credit decision systems can be made safer when model outputs are checked against evidence quality, predictive uncertainty, and out-of-distribution signals before a final decision is issued.
+This repository supports research project on safety gating for automated alternative credit decisions. The project studies whether automated credit decision systems can be made safer when model outputs are checked against evidence quality, predictive uncertainty, and out-of-distribution signals before a final decision is issued.
 
 ## Research Problem
 
