@@ -138,6 +138,27 @@ Implications for the future Safety Gate: calibrated probability estimates may he
 
 Limitations: all results remain synthetic and depend on the generated outcome mechanism. Calibration quality must be reassessed under distribution shift, evidence corruption, and eventually real-world validation data before drawing practical credit-decision conclusions.
 
+## Evidence Quality And Controlled Degradation
+
+Phase 5 adds a separate experimental layer for evidence quality. Its purpose is to make future safety-gate experiments able to inspect whether financial evidence is complete, internally consistent, current, and verified. It does not change the existing 13-feature baseline model contract, clean model dataset, outcome labels, baseline splits, models, or calibration artifacts.
+
+Four observable applicant-level dimensions are computed from each degraded evidence variant:
+
+- Completeness is reduced by missing monthly records and missing required financial fields.
+- Consistency is reduced by observable cashflow contradictions and other implausible numeric relationships.
+- Freshness is based on the age of the latest observed month relative to assessment month 12.
+- Provenance is reduced by a simulated unverified-record status.
+
+The experiment implements four fixed-seed scenarios at low, medium, and high severity: missingness, stale records, inconsistent records, and unverified provenance. Applicants are sampled only by `applicant_id` with the configured random seed. Target labels, financial stress probabilities, population labels, latent variables, and test outcomes are not used in scenario selection.
+
+Clean history and model data are never modified. `degradation_events.csv` is a reproducible overlay on the clean monthly history, and a small materialized evidence sample is saved for inspection. No degraded model features are created in this phase, so no full-dataset imputation or held-out-observation fallback is introduced. Future feature derivation must define preprocessing within the relevant experimental split.
+
+The optional `evidence_quality_score` is the unweighted arithmetic mean of completeness, consistency, freshness, and provenance scores. The separate dimensions remain primary. The aggregate is provisional, has no empirically validated weights, and is not a probability or a real-world measurement of evidence quality.
+
+Observed synthetic results were monotonic in the intended dimension as severity increased. For example, mean completeness under missingness declined from 0.9766 (low) to 0.8891 (medium) to 0.7101 (high); mean freshness under stale records declined from 0.9864 to 0.9182 to 0.7727; mean consistency under inconsistent records declined from 0.9875 to 0.9250 to 0.7917; and mean provenance under unverified-provenance scenarios declined from 0.9750 to 0.8750 to 0.6667.
+
+Limitations: these are explicitly simulated defects and quality scores derived from synthetic assumptions. They do not establish how real bank, payroll, utility, rental, or transaction evidence behaves. The scenarios were not tuned to prove that a future Safety Gate will succeed.
+
 ## Open Research Decisions
 
 - Select the first dataset and document licensing, provenance, variables, and known limitations.

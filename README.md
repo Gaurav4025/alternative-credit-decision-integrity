@@ -181,6 +181,32 @@ Calibration artifacts are saved under:
 
 The notebook `notebooks/04_probability_calibration.ipynb` reports Brier score, log loss, ECE, reliability diagrams, and probability distributions. ECE uses 10 fixed-width bins over `[0, 1]`; empty bins are ignored.
 
+## Evidence Quality And Controlled Degradation
+
+Phase 5 creates an independent evidence-quality layer for future safety-gate experiments. It does not change the 13 baseline model features, target generation, baseline models, calibration models, or train/validation/test split.
+
+The experiment measures four observable applicant-level dimensions from financial evidence:
+
+- Completeness: missing monthly observations and required evidence fields.
+- Consistency: detectable cashflow contradictions or implausible numeric relationships.
+- Freshness: age of the newest available evidence relative to assessment month 12.
+- Provenance: simulated verified versus unverified record status.
+
+It produces fixed-seed, label-blind scenarios at low, medium, and high severity: `missingness`, `stale_records`, `inconsistent_records`, and `unverified_provenance`. Selection uses only applicant IDs and the configured random seed; it does not use targets, stress probabilities, population labels, latent traits, or test outcomes.
+
+Quality dimensions are retained separately. The optional `evidence_quality_score` is their unweighted arithmetic mean, included only as a provisional summary. It is not empirically validated, does not express real-world evidence quality, and is not a calibrated probability.
+
+Outputs are stored in `experiments/evidence_quality/`:
+
+- `applicant_evidence_quality.csv`: applicant-level measurements and simulated-defect metadata.
+- `degradation_events.csv`: reproducible event overlay on the clean history.
+- `degraded_evidence_samples.csv`: materialized degraded records for inspection.
+- `scenario_summary.csv` and `metadata.json`.
+
+No degraded model-feature table is produced in this phase. This avoids imputing missing values with information from held-out observations; any later feature derivation must define split-aware preprocessing independently.
+
+The notebook `notebooks/05_evidence_quality.ipynb` validates synthetic degradation behavior and must not be interpreted as evidence of real-world credit-data reliability.
+
 ## Excluded Variables
 
 Because this project studies thin-file and credit-invisible applicants, conventional credit-history variables are excluded. The synthetic data must not include credit score, CIBIL score, prior loan history, previous EMI repayment history, credit-card repayment history, number of previous loans, bureau history, or previous-loan delinquency history.

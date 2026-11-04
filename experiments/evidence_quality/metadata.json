@@ -1,0 +1,36 @@
+{
+  "clean_model_dataset_unchanged": true,
+  "config": {
+    "assessment_month": 12,
+    "quality_dimensions": [
+      "completeness_score",
+      "consistency_score",
+      "freshness_score",
+      "provenance_score"
+    ],
+    "sample_applicants_per_variant": 5,
+    "scenarios": [
+      "missingness",
+      "stale_records",
+      "inconsistent_records",
+      "unverified_provenance"
+    ],
+    "seed": 42,
+    "severities": [
+      "low",
+      "medium",
+      "high"
+    ]
+  },
+  "degraded_evidence_representation": "degradation_events.csv is a reproducible overlay on the clean financial history; degraded_evidence_samples.csv contains materialized records for inspection",
+  "derived_model_features": "not produced in this phase",
+  "quality_dimensions": [
+    "completeness_score",
+    "consistency_score",
+    "freshness_score",
+    "provenance_score"
+  ],
+  "quality_score_definition": "provisional unweighted arithmetic mean of the four separate quality dimensions; not empirically validated and not a probability",
+  "selection_basis": "fixed-seed random sampling of applicant_id only",
+  "targets_regenerated": false
+}
