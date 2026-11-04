@@ -1,8 +1,8 @@
 """Controlled evidence-quality experiments for synthetic financial histories.
 
-This module is deliberately independent from the risk-model feature contract.
-It models observable evidence defects and writes separate experimental artifacts;
-it never changes clean data, target labels, model splits, or baseline artifacts.
+This module creates evidence-only artifacts for future research. It never
+changes clean datasets, target labels, model splits, model features, or Phase
+1-4 artifacts.
 """
 
 from __future__ import annotations
@@ -18,28 +18,13 @@ from src.data.validation import assert_no_forbidden_credit_variables
 from src.utils.reproducibility import DEFAULT_RANDOM_SEED
 
 REQUIRED_EVIDENCE_FIELDS = (
-    "monthly_income",
-    "monthly_expenses",
-    "savings_balance",
-    "utility_bill_amount",
-    "utility_payment_status",
-    "rent_amount",
-    "rent_payment_status",
-    "transaction_count",
-    "incoming_transaction_amount",
-    "outgoing_transaction_amount",
-    "end_of_month_balance",
+    "monthly_income", "monthly_expenses", "savings_balance", "utility_bill_amount",
+    "utility_payment_status", "rent_amount", "rent_payment_status", "transaction_count",
+    "incoming_transaction_amount", "outgoing_transaction_amount", "end_of_month_balance",
     "net_cashflow",
 )
-
-SCENARIOS = (
-    "missingness",
-    "stale_records",
-    "inconsistent_records",
-    "unverified_provenance",
-)
+SCENARIOS = ("missingness", "stale_records", "inconsistent_records", "unverified_provenance")
 SEVERITIES = ("low", "medium", "high")
-
 SEVERITY_SETTINGS = {
     "low": {"affected_rate": 0.15, "months": 1, "field_rate": 0.08, "verification_rate": 0.20},
     "medium": {"affected_rate": 0.30, "months": 3, "field_rate": 0.16, "verification_rate": 0.45},
@@ -49,7 +34,7 @@ SEVERITY_SETTINGS = {
 
 @dataclass(frozen=True)
 class EvidenceQualityConfig:
-    """Reproducible settings for the evidence-quality experiment."""
+    """Configuration for deterministic, label-blind evidence degradation."""
 
     seed: int = DEFAULT_RANDOM_SEED
     assessment_month: int = 12
@@ -58,10 +43,7 @@ class EvidenceQualityConfig:
     sample_applicants_per_variant: int = 5
     quality_dimensions: tuple[str, ...] = field(
         default_factory=lambda: (
-            "completeness_score",
-            "consistency_score",
-            "freshness_score",
-            "provenance_score",
+            "completeness_score", "consistency_score", "freshness_score", "provenance_score"
         )
     )
 
@@ -72,97 +54,65 @@ def run_evidence_quality_experiment(
     output_dir: str | Path = "experiments/evidence_quality",
     config: EvidenceQualityConfig | None = None,
 ) -> dict[str, object]:
-    """Run all configured controlled degradation variants and save artifacts.
-
-    Applicant selection depends solely on stable applicant IDs and a fixed random
-    seed. It never reads targets, stress probabilities, populations, or latents.
-    The model dataset is loaded only to audit that it remains unmodified.
-    """
+    """Write reproducible evidence-quality artifacts without changing inputs."""
 
     config = config or EvidenceQualityConfig()
     _validate_config(config)
-    clean_history = pd.read_csv(raw_history_path)
-    clean_model_dataset = pd.read_csv(model_dataset_path)
+    history_path, dataset_path = Path(raw_history_path), Path(model_dataset_path)
+    clean_history = pd.read_csv(history_path)
+    clean_model_dataset = pd.read_csv(dataset_path)
     _validate_clean_inputs(clean_history, clean_model_dataset, config)
-    model_dataset_bytes = Path(model_dataset_path).read_bytes()
+    history_bytes, model_bytes = history_path.read_bytes(), dataset_path.read_bytes()
 
-    all_metadata: list[pd.DataFrame] = []
-    all_events: list[pd.DataFrame] = []
-    all_samples: list[pd.DataFrame] = []
+    metadata_frames: list[pd.DataFrame] = []
+    event_frames: list[pd.DataFrame] = []
+    sample_frames: list[pd.DataFrame] = []
     summaries: list[dict[str, object]] = []
-    variant_seed_sequence = np.random.SeedSequence(config.seed).spawn(
-        len(config.scenarios) * len(config.severities)
-    )
+    seeds = np.random.SeedSequence(config.seed).spawn(len(config.scenarios) * len(config.severities))
+    variants = ((scenario, severity) for scenario in config.scenarios for severity in config.severities)
 
-    for (scenario, severity), child_seed in zip(
-        ((scenario, severity) for scenario in config.scenarios for severity in config.severities),
-        variant_seed_sequence,
-    ):
-        rng = np.random.default_rng(child_seed)
-        degraded, record_metadata, events = create_degraded_evidence(
-            clean_history=clean_history,
-            scenario=scenario,
-            severity=severity,
-            assessment_month=config.assessment_month,
-            rng=rng,
+    for (scenario, severity), child_seed in zip(variants, seeds):
+        degraded, applicant_metadata, events = create_degraded_evidence(
+            clean_history, scenario, severity, config.assessment_month, np.random.default_rng(child_seed)
         )
-        applicant_metadata = measure_evidence_quality(
-            evidence_history=degraded,
-            clean_history=clean_history,
-            record_metadata=record_metadata,
-            scenario=scenario,
-            severity=severity,
-            assessment_month=config.assessment_month,
+        quality = measure_evidence_quality(
+            degraded, clean_history, applicant_metadata, scenario, severity, config.assessment_month
         )
-        events.insert(0, "severity", severity)
-        events.insert(0, "scenario", scenario)
-        all_metadata.append(applicant_metadata)
-        all_events.append(events)
-        all_samples.append(
-            _sample_degraded_records(
-                degraded,
-                applicant_metadata,
-                scenario,
-                severity,
-                config.sample_applicants_per_variant,
-            )
-        )
-        summaries.append(_summarize_variant(applicant_metadata))
+        metadata_frames.append(quality)
+        event_frames.append(events.assign(scenario=scenario, severity=severity))
+        sample_frames.append(_sample_degraded_records(
+            degraded, quality, scenario, severity, config.sample_applicants_per_variant
+        ))
+        summaries.append(_summarize_variant(quality))
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    metadata = pd.concat(all_metadata, ignore_index=True)
-    events = pd.concat(all_events, ignore_index=True)
-    samples = pd.concat(all_samples, ignore_index=True)
-    summary = pd.DataFrame(summaries)
+    pd.concat(metadata_frames, ignore_index=True).to_csv(output_path / "applicant_evidence_quality.csv", index=False)
+    pd.concat(event_frames, ignore_index=True).to_csv(output_path / "degradation_events.csv", index=False)
+    pd.concat(sample_frames, ignore_index=True).to_csv(output_path / "degraded_evidence_samples.csv", index=False)
+    pd.DataFrame(summaries).to_csv(output_path / "scenario_summary.csv", index=False)
 
-    metadata.to_csv(output_path / "applicant_evidence_quality.csv", index=False)
-    events.to_csv(output_path / "degradation_events.csv", index=False)
-    samples.to_csv(output_path / "degraded_evidence_samples.csv", index=False)
-    summary.to_csv(output_path / "scenario_summary.csv", index=False)
-
-    experiment_metadata: dict[str, object] = {
+    result = {
         "config": asdict(config),
         "selection_basis": "fixed-seed random sampling of applicant_id only",
+        "staleness_assumption": (
+            "month remains the underlying financial observation period; stale records remain present "
+            "and receive synthetic reporting-lag metadata rather than fabricated real timestamps"
+        ),
         "quality_dimensions": list(config.quality_dimensions),
         "quality_score_definition": (
-            "provisional unweighted arithmetic mean of the four separate "
-            "quality dimensions; not empirically validated and not a probability"
+            "provisional unweighted arithmetic mean of separate quality dimensions; "
+            "not empirically validated and not a probability"
         ),
-        "degraded_evidence_representation": (
-            "degradation_events.csv is a reproducible overlay on the clean "
-            "financial history; degraded_evidence_samples.csv contains materialized "
-            "records for inspection"
-        ),
-        "derived_model_features": "not produced in this phase",
-        "clean_model_dataset_unchanged": Path(model_dataset_path).read_bytes()
-        == model_dataset_bytes,
+        "clean_history_unchanged": history_path.read_bytes() == history_bytes,
+        "clean_model_dataset_unchanged": dataset_path.read_bytes() == model_bytes,
         "targets_regenerated": False,
+        "derived_model_features": "not produced in this phase",
     }
     with (output_path / "metadata.json").open("w", encoding="utf-8") as handle:
-        json.dump(experiment_metadata, handle, indent=2, sort_keys=True)
+        json.dump(result, handle, indent=2, sort_keys=True)
         handle.write("\n")
-    return experiment_metadata
+    return result
 
 
 def create_degraded_evidence(
@@ -172,357 +122,225 @@ def create_degraded_evidence(
     assessment_month: int,
     rng: np.random.Generator,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Create one degradation variant without using labels or population labels."""
+    """Create one variant with distinct applicant-level and record-level metadata."""
 
     if scenario not in SCENARIOS or severity not in SEVERITIES:
         raise ValueError("Scenario and severity must be supported values.")
     applicant_ids = np.sort(clean_history["applicant_id"].unique())
-    settings = SEVERITY_SETTINGS[severity]
-    affected_count = int(round(len(applicant_ids) * settings["affected_rate"]))
-    affected_ids = np.sort(rng.choice(applicant_ids, size=affected_count, replace=False))
+    affected_count = int(round(len(applicant_ids) * SEVERITY_SETTINGS[severity]["affected_rate"]))
+    affected_ids = np.sort(rng.choice(applicant_ids, affected_count, replace=False))
     affected_set = set(affected_ids.tolist())
 
-    evidence = clean_history.drop(columns=["population_group"], errors="ignore").copy(
-        deep=True
-    )
+    evidence = clean_history.drop(columns=["population_group"], errors="ignore").copy()
     evidence["simulated_verification_status"] = "verified"
-    evidence["simulated_defect_introduced"] = False
-    events: list[dict[str, object]] = []
+    evidence["synthetic_reporting_lag_months"] = 0
+    evidence["synthetic_evidence_age_months"] = assessment_month - evidence["month"]
+    evidence["simulated_record_defect_introduced"] = False
+    evidence["simulated_record_defect_type"] = "none"
 
     if scenario == "missingness":
         evidence, events = _apply_missingness(evidence, affected_set, severity, rng)
     elif scenario == "stale_records":
-        evidence, events = _apply_staleness(
-            evidence, affected_set, severity, assessment_month
-        )
+        evidence, events = _apply_staleness(evidence, affected_set, severity)
     elif scenario == "inconsistent_records":
         evidence, events = _apply_inconsistency(evidence, affected_set, severity, rng)
-    elif scenario == "unverified_provenance":
-        evidence, events = _apply_unverified_provenance(
-            evidence, affected_set, severity, rng
-        )
+    else:
+        evidence, events = _apply_unverified_provenance(evidence, affected_set, severity, rng)
 
-    affected_mask = evidence["applicant_id"].isin(affected_set)
-    evidence.loc[affected_mask, "simulated_defect_introduced"] = True
-    record_metadata = pd.DataFrame(
-        {
-            "applicant_id": applicant_ids,
-            "simulated_defect_introduced": [
-                applicant_id in affected_set for applicant_id in applicant_ids
-            ],
-            "simulated_defect_type": [
-                scenario if applicant_id in affected_set else "none"
-                for applicant_id in applicant_ids
-            ],
-        }
-    )
-    event_frame = pd.DataFrame(events, columns=_event_columns())
-    return evidence, record_metadata, event_frame
+    applicant_metadata = pd.DataFrame({
+        "applicant_id": applicant_ids,
+        "simulated_applicant_defect_introduced": [applicant_id in affected_set for applicant_id in applicant_ids],
+        "simulated_applicant_defect_type": [scenario if applicant_id in affected_set else "none" for applicant_id in applicant_ids],
+    })
+    return evidence, applicant_metadata, pd.DataFrame(events, columns=_event_columns())
 
 
 def measure_evidence_quality(
     evidence_history: pd.DataFrame,
     clean_history: pd.DataFrame,
-    record_metadata: pd.DataFrame,
+    applicant_metadata: pd.DataFrame,
     scenario: str,
     severity: str,
     assessment_month: int,
 ) -> pd.DataFrame:
-    """Measure four observable evidence-quality dimensions per applicant."""
+    """Measure separate completeness, consistency, freshness, and provenance."""
 
-    clean_counts = clean_history.groupby("applicant_id")["month"].nunique()
-    observed_counts = evidence_history.groupby("applicant_id")["month"].nunique()
-    latest_month = evidence_history.groupby("applicant_id")["month"].max()
-    missing_field_counts = evidence_history.groupby("applicant_id")[
-        list(REQUIRED_EVIDENCE_FIELDS)
-    ].apply(lambda frame: int(frame.isna().sum().sum()))
-    violations = _count_consistency_violations(evidence_history)
-    unverified_counts = (
-        evidence_history["simulated_verification_status"].eq("unverified")
-        .groupby(evidence_history["applicant_id"])
-        .sum()
+    expected_months = clean_history.groupby("applicant_id")["month"].nunique()
+    observed_months = evidence_history.groupby("applicant_id")["month"].nunique()
+    missing_fields = evidence_history.groupby("applicant_id")[list(REQUIRED_EVIDENCE_FIELDS)].apply(
+        lambda frame: int(frame.isna().sum().sum())
     )
+    violations = _count_consistency_violations(evidence_history)
+    latest_age = evidence_history.groupby("applicant_id")["synthetic_evidence_age_months"].min()
+    unverified = evidence_history["simulated_verification_status"].eq("unverified").groupby(evidence_history["applicant_id"]).sum()
+    defective_records = evidence_history["simulated_record_defect_introduced"].groupby(evidence_history["applicant_id"]).sum()
 
-    quality = record_metadata.copy()
-    quality["total_expected_months"] = quality["applicant_id"].map(clean_counts)
-    quality["observed_months"] = quality["applicant_id"].map(observed_counts).fillna(0)
-    quality["missing_month_count"] = (
-        quality["total_expected_months"] - quality["observed_months"]
-    ).astype(int)
-    quality["missing_required_field_count"] = quality["applicant_id"].map(
-        missing_field_counts
-    ).fillna(0).astype(int)
-    quality["latest_observed_month"] = quality["applicant_id"].map(latest_month).fillna(0)
-    quality["observation_age_months"] = (
-        assessment_month - quality["latest_observed_month"]
-    ).astype(int)
-    quality["consistency_violation_count"] = quality["applicant_id"].map(
-        violations
-    ).fillna(0).astype(int)
-    quality["unverified_record_count"] = quality["applicant_id"].map(
-        unverified_counts
-    ).fillna(0).astype(int)
+    quality = applicant_metadata.copy()
+    quality["total_expected_months"] = quality["applicant_id"].map(expected_months)
+    quality["observed_months"] = quality["applicant_id"].map(observed_months).fillna(0).astype(int)
+    quality["missing_month_count"] = (quality["total_expected_months"] - quality["observed_months"]).astype(int)
+    quality["missing_required_field_count"] = quality["applicant_id"].map(missing_fields).fillna(0).astype(int)
+    quality["latest_evidence_age_months"] = quality["applicant_id"].map(latest_age).fillna(assessment_month).astype(int)
+    quality["consistency_violation_count"] = quality["applicant_id"].map(violations).fillna(0).astype(int)
+    quality["unverified_record_count"] = quality["applicant_id"].map(unverified).fillna(0).astype(int)
+    quality["defective_record_count"] = quality["applicant_id"].map(defective_records).fillna(0).astype(int)
 
-    total_field_slots = quality["total_expected_months"] * len(REQUIRED_EVIDENCE_FIELDS)
-    quality["completeness_score"] = (
-        1
-        - quality["missing_month_count"] / quality["total_expected_months"]
-        - quality["missing_required_field_count"] / total_field_slots
-    ).clip(0, 1)
-    quality["consistency_score"] = (
-        1 - quality["consistency_violation_count"] / quality["total_expected_months"]
-    ).clip(0, 1)
-    quality["freshness_score"] = (
-        1 - quality["observation_age_months"] / (assessment_month - 1)
-    ).clip(0, 1)
-    quality["provenance_score"] = (
-        1 - quality["unverified_record_count"] / quality["observed_months"].clip(lower=1)
-    ).clip(0, 1)
-    quality["evidence_quality_score"] = quality[
-        [
-            "completeness_score",
-            "consistency_score",
-            "freshness_score",
-            "provenance_score",
-        ]
-    ].mean(axis=1)
+    field_slots = quality["total_expected_months"] * len(REQUIRED_EVIDENCE_FIELDS)
+    quality["completeness_score"] = (1 - quality["missing_month_count"] / quality["total_expected_months"] - quality["missing_required_field_count"] / field_slots).clip(0, 1)
+    quality["consistency_score"] = (1 - quality["consistency_violation_count"] / quality["total_expected_months"]).clip(0, 1)
+    quality["freshness_score"] = (1 - quality["latest_evidence_age_months"] / (assessment_month - 1)).clip(0, 1)
+    quality["provenance_score"] = (1 - quality["unverified_record_count"] / quality["observed_months"].clip(lower=1)).clip(0, 1)
+    quality["evidence_quality_score"] = quality[["completeness_score", "consistency_score", "freshness_score", "provenance_score"]].mean(axis=1)
     quality.insert(0, "severity", severity)
     quality.insert(0, "scenario", scenario)
     return quality
 
 
-def _apply_missingness(
-    evidence: pd.DataFrame,
-    affected_ids: set[int],
-    severity: str,
-    rng: np.random.Generator,
-) -> tuple[pd.DataFrame, list[dict[str, object]]]:
-    """Remove monthly records and required field values for selected applicants."""
+def _apply_missingness(evidence: pd.DataFrame, affected_ids: set[int], severity: str, rng: np.random.Generator) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    """Remove non-latest months and blank fields on retained records."""
 
-    settings = SEVERITY_SETTINGS[severity]
+    setting = SEVERITY_SETTINGS[severity]
     drop_indices: list[int] = []
     events: list[dict[str, object]] = []
     for applicant_id in affected_ids:
-        applicant_rows = evidence[evidence["applicant_id"] == applicant_id]
-        months = applicant_rows["month"].to_numpy()
-        dropped_months = rng.choice(
-            months, size=min(settings["months"], len(months) - 1), replace=False
-        )
-        for month in dropped_months:
-            index = applicant_rows.loc[applicant_rows["month"] == month].index[0]
-            drop_indices.append(index)
-            events.append(_event(applicant_id, int(month), "missing_month", None, "removed"))
-
-        remaining = applicant_rows[~applicant_rows["month"].isin(dropped_months)]
-        field_mask = rng.random((len(remaining), len(REQUIRED_EVIDENCE_FIELDS))) < settings["field_rate"]
-        for row_position, row_index in enumerate(remaining.index):
+        rows = evidence[evidence["applicant_id"] == applicant_id]
+        candidates = rows.loc[rows["month"] < rows["month"].max(), "month"].to_numpy()
+        removed_months = rng.choice(candidates, min(setting["months"], len(candidates)), replace=False)
+        for month in removed_months:
+            row_index = rows.loc[rows["month"] == month].index[0]
+            drop_indices.append(row_index)
+            events.append(_event(applicant_id, int(month), "missing_month", None, "removed", False))
+        retained = rows[~rows["month"].isin(removed_months)]
+        mask = rng.random((len(retained), len(REQUIRED_EVIDENCE_FIELDS))) < setting["field_rate"]
+        for row_position, row_index in enumerate(retained.index):
             for field_position, field_name in enumerate(REQUIRED_EVIDENCE_FIELDS):
-                if field_mask[row_position, field_position]:
+                if mask[row_position, field_position]:
                     evidence.loc[row_index, field_name] = pd.NA
-                    events.append(
-                        _event(
-                            applicant_id,
-                            int(evidence.loc[row_index, "month"]),
-                            "missing_field",
-                            field_name,
-                            "missing",
-                        )
-                    )
+                    _mark_record(evidence, row_index, "missing_field")
+                    events.append(_event(applicant_id, int(evidence.loc[row_index, "month"]), "missing_field", field_name, "missing", True))
     return evidence.drop(index=drop_indices).reset_index(drop=True), events
 
 
-def _apply_staleness(
-    evidence: pd.DataFrame,
-    affected_ids: set[int],
-    severity: str,
-    assessment_month: int,
-) -> tuple[pd.DataFrame, list[dict[str, object]]]:
-    """Remove most recent observations to create explicitly stale evidence."""
+def _apply_staleness(evidence: pd.DataFrame, affected_ids: set[int], severity: str) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    """Preserve records and simulate delayed reporting metadata only."""
 
-    stale_months = SEVERITY_SETTINGS[severity]["months"]
-    threshold = assessment_month - stale_months + 1
-    mask = evidence["applicant_id"].isin(affected_ids) & (evidence["month"] >= threshold)
-    removed = evidence.loc[mask, ["applicant_id", "month"]]
+    lag = SEVERITY_SETTINGS[severity]["months"]
+    mask = evidence["applicant_id"].isin(affected_ids)
+    evidence.loc[mask, "synthetic_reporting_lag_months"] = lag
+    evidence.loc[mask, "synthetic_evidence_age_months"] += lag
+    evidence.loc[mask, "simulated_record_defect_introduced"] = True
+    evidence.loc[mask, "simulated_record_defect_type"] = "stale_reporting_lag"
     events = [
-        _event(int(row.applicant_id), int(row.month), "stale_record", None, "removed")
-        for row in removed.itertuples(index=False)
+        _event(int(row.applicant_id), int(row.month), "stale_reporting_lag", "synthetic_reporting_lag_months", "modified", True)
+        for row in evidence.loc[mask, ["applicant_id", "month"]].itertuples(index=False)
     ]
-    return evidence.loc[~mask].reset_index(drop=True), events
-
-
-def _apply_inconsistency(
-    evidence: pd.DataFrame,
-    affected_ids: set[int],
-    severity: str,
-    rng: np.random.Generator,
-) -> tuple[pd.DataFrame, list[dict[str, object]]]:
-    """Create auditable cashflow contradictions while retaining valid numbers."""
-
-    events: list[dict[str, object]] = []
-    months_to_change = SEVERITY_SETTINGS[severity]["months"]
-    for applicant_id in affected_ids:
-        applicant_rows = evidence[evidence["applicant_id"] == applicant_id]
-        selected = rng.choice(
-            applicant_rows.index,
-            size=min(months_to_change, len(applicant_rows)),
-            replace=False,
-        )
-        for row_index in selected:
-            income = float(evidence.loc[row_index, "monthly_income"])
-            evidence.loc[row_index, "net_cashflow"] = round(
-                float(evidence.loc[row_index, "net_cashflow"])
-                + income * rng.uniform(0.15, 0.35),
-                2,
-            )
-            events.append(
-                _event(
-                    applicant_id,
-                    int(evidence.loc[row_index, "month"]),
-                    "cashflow_contradiction",
-                    "net_cashflow",
-                    "modified",
-                )
-            )
     return evidence, events
 
 
-def _apply_unverified_provenance(
-    evidence: pd.DataFrame,
-    affected_ids: set[int],
-    severity: str,
-    rng: np.random.Generator,
-) -> tuple[pd.DataFrame, list[dict[str, object]]]:
-    """Mark selected records unverified without changing financial values."""
+def _apply_inconsistency(evidence: pd.DataFrame, affected_ids: set[int], severity: str, rng: np.random.Generator) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    """Create cashflow contradictions while retaining valid non-missing numbers."""
 
     events: list[dict[str, object]] = []
-    rate = SEVERITY_SETTINGS[severity]["verification_rate"]
+    for applicant_id in affected_ids:
+        rows = evidence[evidence["applicant_id"] == applicant_id]
+        selected = rng.choice(rows.index, min(SEVERITY_SETTINGS[severity]["months"], len(rows)), replace=False)
+        for row_index in selected:
+            evidence.loc[row_index, "net_cashflow"] = round(float(evidence.loc[row_index, "net_cashflow"]) + float(evidence.loc[row_index, "monthly_income"]) * rng.uniform(0.15, 0.35), 2)
+            _mark_record(evidence, row_index, "cashflow_contradiction")
+            events.append(_event(applicant_id, int(evidence.loc[row_index, "month"]), "cashflow_contradiction", "net_cashflow", "modified", True))
+    return evidence, events
+
+
+def _apply_unverified_provenance(evidence: pd.DataFrame, affected_ids: set[int], severity: str, rng: np.random.Generator) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    """Change verification metadata without changing financial evidence values."""
+
+    events: list[dict[str, object]] = []
     for applicant_id in affected_ids:
         indexes = evidence.index[evidence["applicant_id"] == applicant_id]
-        selected = rng.choice(indexes, size=int(round(len(indexes) * rate)), replace=False)
-        evidence.loc[selected, "simulated_verification_status"] = "unverified"
-        for row_index in selected:
-            events.append(
-                _event(
-                    applicant_id,
-                    int(evidence.loc[row_index, "month"]),
-                    "unverified_source",
-                    "simulated_verification_status",
-                    "unverified",
-                )
-            )
+        count = int(round(len(indexes) * SEVERITY_SETTINGS[severity]["verification_rate"]))
+        for row_index in rng.choice(indexes, count, replace=False):
+            evidence.loc[row_index, "simulated_verification_status"] = "unverified"
+            _mark_record(evidence, row_index, "unverified_source")
+            events.append(_event(applicant_id, int(evidence.loc[row_index, "month"]), "unverified_source", "simulated_verification_status", "modified", True))
     return evidence, events
+
+
+def _mark_record(evidence: pd.DataFrame, row_index: int, defect_type: str) -> None:
+    evidence.loc[row_index, "simulated_record_defect_introduced"] = True
+    evidence.loc[row_index, "simulated_record_defect_type"] = defect_type
 
 
 def _count_consistency_violations(evidence: pd.DataFrame) -> pd.Series:
-    """Count observable contradictory or implausible records per applicant."""
-
-    numeric_fields = [
-        "monthly_income",
-        "monthly_expenses",
-        "savings_balance",
-        "utility_bill_amount",
-        "rent_amount",
-        "transaction_count",
-        "incoming_transaction_amount",
-        "outgoing_transaction_amount",
-        "end_of_month_balance",
-    ]
+    numeric_fields = ["monthly_income", "monthly_expenses", "savings_balance", "utility_bill_amount", "rent_amount", "transaction_count", "incoming_transaction_amount", "outgoing_transaction_amount", "end_of_month_balance"]
     invalid_numeric = evidence[numeric_fields].lt(0).any(axis=1)
-    cashflow_expected = (
-        evidence["monthly_income"]
-        - evidence["monthly_expenses"]
-        - evidence["rent_amount"]
-        - evidence["utility_bill_amount"]
-    )
-    cashflow_mismatch = (evidence["net_cashflow"] - cashflow_expected).abs() > 0.02
-    implausible_rent = evidence["rent_amount"] > 0.65 * evidence["monthly_income"]
-    implausible_expenses = evidence["monthly_expenses"] > 1.45 * evidence["monthly_income"]
-    violation = (invalid_numeric | cashflow_mismatch | implausible_rent | implausible_expenses).fillna(False)
+    expected_cashflow = evidence["monthly_income"] - evidence["monthly_expenses"] - evidence["rent_amount"] - evidence["utility_bill_amount"]
+    mismatch = (evidence["net_cashflow"] - expected_cashflow).abs() > 0.02
+    rent_too_high = evidence["rent_amount"] > 0.65 * evidence["monthly_income"]
+    expenses_too_high = evidence["monthly_expenses"] > 1.45 * evidence["monthly_income"]
+    violation = (invalid_numeric | mismatch | rent_too_high | expenses_too_high).fillna(False)
     return violation.groupby(evidence["applicant_id"]).sum()
 
 
-def _sample_degraded_records(
-    evidence: pd.DataFrame,
-    applicant_metadata: pd.DataFrame,
-    scenario: str,
-    severity: str,
-    count: int,
-) -> pd.DataFrame:
-    """Materialize a small inspection sample; the event overlay is authoritative."""
-
-    affected = applicant_metadata.loc[
-        applicant_metadata["simulated_defect_introduced"], "applicant_id"
-    ].head(count)
-    return evidence[evidence["applicant_id"].isin(affected)].assign(
-        scenario=scenario, severity=severity
-    )
+def _sample_degraded_records(evidence: pd.DataFrame, quality: pd.DataFrame, scenario: str, severity: str, count: int) -> pd.DataFrame:
+    selected = quality.loc[quality["simulated_applicant_defect_introduced"], "applicant_id"].head(count)
+    return evidence[evidence["applicant_id"].isin(selected)].assign(scenario=scenario, severity=severity)
 
 
-def _summarize_variant(metadata: pd.DataFrame) -> dict[str, object]:
-    """Summarize quality dimensions for one scenario and severity."""
-
+def _summarize_variant(quality: pd.DataFrame) -> dict[str, object]:
     return {
-        "scenario": metadata["scenario"].iloc[0],
-        "severity": metadata["severity"].iloc[0],
-        "applicant_count": int(len(metadata)),
-        "affected_applicant_count": int(metadata["simulated_defect_introduced"].sum()),
-        "mean_completeness_score": float(metadata["completeness_score"].mean()),
-        "mean_consistency_score": float(metadata["consistency_score"].mean()),
-        "mean_freshness_score": float(metadata["freshness_score"].mean()),
-        "mean_provenance_score": float(metadata["provenance_score"].mean()),
-        "mean_evidence_quality_score": float(metadata["evidence_quality_score"].mean()),
+        "scenario": quality["scenario"].iloc[0], "severity": quality["severity"].iloc[0],
+        "applicant_count": int(len(quality)),
+        "affected_applicant_count": int(quality["simulated_applicant_defect_introduced"].sum()),
+        "mean_completeness_score": float(quality["completeness_score"].mean()),
+        "mean_consistency_score": float(quality["consistency_score"].mean()),
+        "mean_freshness_score": float(quality["freshness_score"].mean()),
+        "mean_provenance_score": float(quality["provenance_score"].mean()),
+        "mean_evidence_quality_score": float(quality["evidence_quality_score"].mean()),
     }
 
 
-def _event(
-    applicant_id: int,
-    month: int,
-    defect_type: str,
-    field_name: str | None,
-    action: str,
-) -> dict[str, object]:
-    """Create one audit event that can be applied to clean history."""
-
-    return {
-        "applicant_id": applicant_id,
-        "month": month,
-        "simulated_defect_type": defect_type,
-        "field_name": field_name,
-        "action": action,
-    }
+def _event(applicant_id: int, month: int, defect_type: str, field_name: str | None, action: str, record_present_after_degradation: bool) -> dict[str, object]:
+    return {"applicant_id": applicant_id, "month": month, "simulated_defect_type": defect_type, "field_name": field_name, "action": action, "record_present_after_degradation": record_present_after_degradation}
 
 
 def _event_columns() -> list[str]:
-    return ["applicant_id", "month", "simulated_defect_type", "field_name", "action"]
+    return ["applicant_id", "month", "simulated_defect_type", "field_name", "action", "record_present_after_degradation"]
 
 
 def _validate_config(config: EvidenceQualityConfig) -> None:
-    """Validate fixed experiment choices before modifying any copy of evidence."""
-
     if config.assessment_month <= 1:
         raise ValueError("assessment_month must be greater than 1.")
     if config.sample_applicants_per_variant <= 0:
         raise ValueError("sample_applicants_per_variant must be positive.")
-    if not set(config.scenarios).issubset(SCENARIOS):
-        raise ValueError("Unsupported scenario in configuration.")
-    if not set(config.severities).issubset(SEVERITIES):
-        raise ValueError("Unsupported severity in configuration.")
+    if not set(config.scenarios).issubset(SCENARIOS) or not set(config.severities).issubset(SEVERITIES):
+        raise ValueError("Configuration contains unsupported scenarios or severities.")
 
 
-def _validate_clean_inputs(
-    clean_history: pd.DataFrame,
-    clean_model_dataset: pd.DataFrame,
-    config: EvidenceQualityConfig,
-) -> None:
-    """Verify clean input schema without reading targets for corruption logic."""
+def _validate_clean_inputs(clean_history: pd.DataFrame, model_dataset: pd.DataFrame, config: EvidenceQualityConfig) -> None:
+    """Validate required schema, IDs, coverage, and assessment-month consistency."""
 
     assert_no_forbidden_credit_variables(clean_history)
-    assert_no_forbidden_credit_variables(clean_model_dataset)
-    required_history = {"applicant_id", "month", *REQUIRED_EVIDENCE_FIELDS}
-    if missing := required_history - set(clean_history.columns):
+    assert_no_forbidden_credit_variables(model_dataset)
+    required = {"applicant_id", "month", *REQUIRED_EVIDENCE_FIELDS}
+    if missing := required - set(clean_history.columns):
         raise ValueError(f"Missing clean financial history columns: {sorted(missing)}")
-    if clean_history["month"].max() < config.assessment_month:
-        raise ValueError("Assessment month is beyond available evidence history.")
+    if "applicant_id" not in model_dataset.columns:
+        raise ValueError("Model dataset must include applicant_id.")
+    if clean_history["applicant_id"].isna().any() or model_dataset["applicant_id"].isna().any():
+        raise ValueError("Applicant IDs must be non-null.")
+    if model_dataset["applicant_id"].duplicated().any():
+        raise ValueError("Model dataset applicant IDs must be unique.")
+    if clean_history.duplicated(["applicant_id", "month"]).any():
+        raise ValueError("Financial history applicant-month combinations must be unique.")
+    months = pd.to_numeric(clean_history["month"], errors="coerce")
+    if months.isna().any() or not np.equal(months, months.astype(int)).all():
+        raise ValueError("Financial history month values must be non-null integers.")
+    if months.min() != 1 or months.max() != config.assessment_month or not months.between(1, config.assessment_month).all():
+        raise ValueError("Assessment month must equal the final available month within a 1..assessment window.")
+    if not clean_history.groupby("applicant_id")["month"].max().eq(config.assessment_month).all():
+        raise ValueError("Every applicant must have evidence through the assessment month.")
+    if set(clean_history["applicant_id"]) != set(model_dataset["applicant_id"]):
+        raise ValueError("Financial history and model dataset applicant IDs must match exactly.")
 
 
 if __name__ == "__main__":

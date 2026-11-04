@@ -192,7 +192,9 @@ The experiment measures four observable applicant-level dimensions from financia
 - Freshness: age of the newest available evidence relative to assessment month 12.
 - Provenance: simulated verified versus unverified record status.
 
-It produces fixed-seed, label-blind scenarios at low, medium, and high severity: `missingness`, `stale_records`, `inconsistent_records`, and `unverified_provenance`. Selection uses only applicant IDs and the configured random seed; it does not use targets, stress probabilities, population labels, latent traits, or test outcomes.
+It produces fixed-seed, label-blind scenarios at low, medium, and high severity: `missingness`, `stale_records`, `inconsistent_records`, and `unverified_provenance`. Selection uses only applicant IDs and the configured random seed; it does not use targets, stress probabilities, population labels, latent traits, or test outcomes. Missingness removes non-latest monthly records or blanks required fields. Staleness keeps the underlying monthly observation present and adds synthetic reporting-lag and evidence-age metadata; it does not fabricate real-world timestamps or delete records.
+
+Applicant-level metadata records whether an applicant was selected for a scenario. Record-level metadata marks only records actually changed. Removed monthly records are represented only in the event log, because they cannot remain in the degraded evidence output.
 
 Quality dimensions are retained separately. The optional `evidence_quality_score` is their unweighted arithmetic mean, included only as a provisional summary. It is not empirically validated, does not express real-world evidence quality, and is not a calibrated probability.
 

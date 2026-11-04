@@ -159,6 +159,18 @@ Observed synthetic results were monotonic in the intended dimension as severity 
 
 Limitations: these are explicitly simulated defects and quality scores derived from synthetic assumptions. They do not establish how real bank, payroll, utility, rental, or transaction evidence behaves. The scenarios were not tuned to prove that a future Safety Gate will succeed.
 
+## Evidence Quality Audit Corrections
+
+The Phase 5 evidence-quality experiment was corrected to preserve the difference between an applicant selected for a scenario and an individual evidence record that was modified. Applicant-level metadata now records scenario selection separately from record-level flags. A retained record is marked defective only when the corruption operation changed its value or metadata. Removed monthly records are recorded in the degradation event log because those records cannot remain in the output dataset.
+
+Staleness is now simulated as stale-but-present evidence. The underlying financial observation remains in the degraded evidence history; the experiment adds `synthetic_reporting_lag_months` and increases `synthetic_evidence_age_months` relative to assessment month 12. These are controlled synthetic metadata, not fabricated real-world reporting timestamps. Missingness remains a separate scenario and removes only non-latest months, so it primarily affects completeness while retaining an age-zero latest observation.
+
+The experiment validates required history fields, non-null IDs, unique applicant-month combinations, integer month values, per-applicant assessment-month coverage, and exact applicant-ID coverage between the history and model dataset. It continues to exclude conventional-credit fields and produces no model features, outcomes, imputation values, or split changes.
+
+Re-executed synthetic outputs preserve the intended dimension-specific pattern. Mean completeness for missingness is 0.9766, 0.8891, and 0.7101 at low, medium, and high severity; freshness remains 1.0000 for those variants. Mean freshness for stale records is 0.9864, 0.9182, and 0.7727 while completeness remains 1.0000. Mean consistency for inconsistent records is 0.9875, 0.9250, and 0.7917; mean provenance for unverified-source variants is 0.9750, 0.8750, and 0.6667. These are mechanics checks for a synthetic experiment, not evidence of real-world evidence quality or future Safety Gate effectiveness.
+
+Limitations remain: each defect mechanism is a deliberately simplified simulation; the unweighted aggregate score is provisional and not calibrated; and no claim can be made about actual financial-data provenance, reporting lags, borrower outcomes, fairness, regulatory compliance, or production suitability.
+
 ## Open Research Decisions
 
 - Select the first dataset and document licensing, provenance, variables, and known limitations.

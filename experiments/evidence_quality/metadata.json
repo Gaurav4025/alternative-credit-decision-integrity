@@ -1,4 +1,5 @@
 {
+  "clean_history_unchanged": true,
   "clean_model_dataset_unchanged": true,
   "config": {
     "assessment_month": 12,
@@ -22,7 +23,6 @@
       "high"
     ]
   },
-  "degraded_evidence_representation": "degradation_events.csv is a reproducible overlay on the clean financial history; degraded_evidence_samples.csv contains materialized records for inspection",
   "derived_model_features": "not produced in this phase",
   "quality_dimensions": [
     "completeness_score",
@@ -30,7 +30,8 @@
     "freshness_score",
     "provenance_score"
   ],
-  "quality_score_definition": "provisional unweighted arithmetic mean of the four separate quality dimensions; not empirically validated and not a probability",
+  "quality_score_definition": "provisional unweighted arithmetic mean of separate quality dimensions; not empirically validated and not a probability",
   "selection_basis": "fixed-seed random sampling of applicant_id only",
+  "staleness_assumption": "month remains the underlying financial observation period; stale records remain present and receive synthetic reporting-lag metadata rather than fabricated real timestamps",
   "targets_regenerated": false
 }
