@@ -330,15 +330,22 @@ def _validate_clean_inputs(clean_history: pd.DataFrame, model_dataset: pd.DataFr
         raise ValueError("Applicant IDs must be non-null.")
     if model_dataset["applicant_id"].duplicated().any():
         raise ValueError("Model dataset applicant IDs must be unique.")
-    if clean_history.duplicated(["applicant_id", "month"]).any():
-        raise ValueError("Financial history applicant-month combinations must be unique.")
     months = pd.to_numeric(clean_history["month"], errors="coerce")
     if months.isna().any() or not np.equal(months, months.astype(int)).all():
         raise ValueError("Financial history month values must be non-null integers.")
-    if months.min() != 1 or months.max() != config.assessment_month or not months.between(1, config.assessment_month).all():
-        raise ValueError("Assessment month must equal the final available month within a 1..assessment window.")
-    if not clean_history.groupby("applicant_id")["month"].max().eq(config.assessment_month).all():
-        raise ValueError("Every applicant must have evidence through the assessment month.")
+    normalized_history = clean_history.assign(_validated_month=months.astype(int))
+    if normalized_history.duplicated(["applicant_id", "_validated_month"]).any():
+        raise ValueError("Financial history applicant-month combinations must be unique.")
+    if not normalized_history["_validated_month"].between(1, config.assessment_month).all():
+        raise ValueError("Financial history months must fall within the assessment window.")
+    expected_months = list(range(1, config.assessment_month + 1))
+    observed_months = normalized_history.groupby("applicant_id")["_validated_month"].agg(
+        lambda values: sorted(values.tolist())
+    )
+    if not observed_months.map(lambda values: values == expected_months).all():
+        raise ValueError(
+            "Every applicant must have exactly one record for every month in the assessment window."
+        )
     if set(clean_history["applicant_id"]) != set(model_dataset["applicant_id"]):
         raise ValueError("Financial history and model dataset applicant IDs must match exactly.")
 

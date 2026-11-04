@@ -146,7 +146,7 @@ def test_input_validation_rejects_duplicate_months_bad_coverage_and_bad_assessme
     with pytest.raises(ValueError, match="match exactly"):
         _validate_clean_inputs(history, model.iloc[:-1], EvidenceQualityConfig())
 
-    with pytest.raises(ValueError, match="Assessment month"):
+    with pytest.raises(ValueError, match="assessment window"):
         _validate_clean_inputs(history, model, EvidenceQualityConfig(assessment_month=11))
 
 
@@ -162,7 +162,16 @@ def test_input_validation_rejects_missing_fields_null_ids_and_incomplete_assessm
         _validate_clean_inputs(null_id_history, model, EvidenceQualityConfig())
 
     incomplete_history = history[
-        ~((history["applicant_id"] == history["applicant_id"].iloc[0]) & (history["month"] == 12))
+        ~((history["applicant_id"] == history["applicant_id"].iloc[0]) & (history["month"] == 6))
     ]
-    with pytest.raises(ValueError, match="Every applicant"):
+    with pytest.raises(ValueError, match="exactly one record"):
         _validate_clean_inputs(incomplete_history, model, EvidenceQualityConfig())
+
+
+def test_input_validation_rejects_invalid_monthly_sequences() -> None:
+    history, model = _history_and_model()
+    invalid_month = history.copy()
+    invalid_month.loc[invalid_month.index[0], "month"] = 13
+
+    with pytest.raises(ValueError, match="assessment window"):
+        _validate_clean_inputs(invalid_month, model, EvidenceQualityConfig())
